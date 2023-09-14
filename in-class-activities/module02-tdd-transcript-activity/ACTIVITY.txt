@@ -1,0 +1,10 @@
+2. The testable behaviors are:
+- addGrade() should add a CourseGrade to the Transcript of the Student
+- addGrade() should throw an exception if the Student is not in the database
+- addGrade() should throw an exception if the Course doesn't match the Course of the CourseGrade
+- if a CourseGrade already exists, addGrade() updates the CourseGrade
+
+3. One exceptional behavior is when a a CourseGrade already exists, it is updated by addGrade().
+Another exceptional behavior is the decision to return exceptions when invalid parameters are given (versus returning something).
+
+Peter Saliba, Madison Lin, Tracy Qiu, Quinn Arbolante
