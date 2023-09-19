@@ -1,3 +1,8 @@
+import InvalidParametersError, {
+  GAME_ID_MISSMATCH_MESSAGE,
+  GAME_NOT_IN_PROGRESS_MESSAGE,
+  INVALID_COMMAND_MESSAGE,
+} from '../../lib/InvalidParametersError';
 import Player from '../../lib/Player';
 import {
   InteractableCommand,
@@ -43,6 +48,93 @@ export default class TicTacToeGameArea extends GameArea<TicTacToeGame> {
     command: CommandType,
     player: Player,
   ): InteractableCommandReturnType<CommandType> {
-    throw new Error('Unimplemented - remove this once you start to implement this method');
+    let response: InteractableCommandReturnType<CommandType>;
+    if (command.type === 'JoinGame') {
+      if (this.game === undefined) {
+        this._game = new TicTacToeGame();
+      }
+      this.game?.join(player);
+      this._emitAreaChanged();
+      response = { gameID: this.game?.id } as InteractableCommandReturnType<CommandType>;
+    } else if (command.type === 'GameMove') {
+      if (this.game === undefined) {
+        throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
+      } else if (this.game.id !== command.gameID) {
+        throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
+      } else {
+        this.game.applyMove({ playerID: player.id, gameID: command.gameID, move: command.move });
+        if (this.game.state.status === 'OVER') {
+          const players = this.occupants;
+          if (this.game.state.winner === players[0].id) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 1,
+                [players[1].userName]: 0,
+              },
+            });
+          } else if (this.game.state.winner === players[1].id) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 0,
+                [players[1].userName]: 1,
+              },
+            });
+          } else if (this.game.state.winner === undefined) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 0,
+                [players[1].userName]: 0,
+              },
+            });
+          }
+        }
+        this._emitAreaChanged();
+        response = undefined as InteractableCommandReturnType<CommandType>;
+      }
+    } else if (command.type === 'LeaveGame') {
+      if (this.game === undefined) {
+        throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
+      } else if (this.game.id !== command.gameID) {
+        throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
+      } else {
+        this.game.leave(player);
+        if (this.game.state.status === 'OVER') {
+          const players = this.occupants;
+          if (this.game.state.winner === players[0].id) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 1,
+                [players[1].userName]: 0,
+              },
+            });
+          } else if (this.game.state.winner === players[1].id) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 0,
+                [players[1].userName]: 1,
+              },
+            });
+          } else if (this.game.state.winner === undefined) {
+            this.history.push({
+              gameID: this.game.id,
+              scores: {
+                [players[0].userName]: 0,
+                [players[1].userName]: 0,
+              },
+            });
+          }
+        }
+        this._emitAreaChanged();
+        response = undefined as InteractableCommandReturnType<CommandType>;
+      }
+    } else {
+      throw new InvalidParametersError(INVALID_COMMAND_MESSAGE);
+    }
+    return response;
   }
 }
