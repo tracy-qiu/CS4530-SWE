@@ -33,6 +33,13 @@ export default class TicTacToeAreaController extends GameAreaController<
    * and board[2][2] is the bottom-right cell
    */
   get board(): TicTacToeCell[][] {
+    const board = new Array<TicTacToeCell>(3).fill(undefined).map(() => new Array<TicTacToeCell>(3).fill(undefined));
+    let moves =  this._model.game?.state.moves
+    if (moves) {
+    for (let index = 0; index < moves.length; index++) {
+
+      }
+    }
     return [[]]; //TODO
   }
 

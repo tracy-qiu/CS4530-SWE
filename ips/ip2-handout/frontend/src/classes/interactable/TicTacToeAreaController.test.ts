@@ -33,7 +33,12 @@ describe('[T1] TicTacToeAreaController', () => {
   Object.defineProperty(mockTownController, 'players', {
     get: () => [ourPlayer, ...otherPlayers],
   });
-
+  mockTownController.getPlayer.mockImplementation(playerID => {
+    const p = mockTownController.players.find(player => player.id === playerID);
+    assert(p);
+    return p;
+  });
+  
   function ticTacToeAreaControllerWithProp({
     _id,
     history,
@@ -84,11 +89,6 @@ describe('[T1] TicTacToeAreaController', () => {
       ret.occupants = players
         .map(eachID => mockTownController.players.find(eachPlayer => eachPlayer.id === eachID))
         .filter(eachPlayer => eachPlayer) as PlayerController[];
-      mockTownController.getPlayer.mockImplementation(playerID => {
-        const p = mockTownController.players.find(player => player.id === playerID);
-        assert(p);
-        return p;
-      });
     }
     return ret;
   }
