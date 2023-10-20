@@ -1,6 +1,8 @@
-import { Button, chakra, Container } from '@chakra-ui/react';
-import React from 'react';
+import { Button, chakra, Container, useToast } from '@chakra-ui/react';
+import React, { useState, useEffect } from 'react';
 import TicTacToeAreaController from '../../../../classes/interactable/TicTacToeAreaController';
+import { TicTacToeCell } from '../../../../classes/interactable/TicTacToeAreaController';
+import { TicTacToeGridPosition } from '../../../../types/CoveyTownSocket';
 
 export type TicTacToeGameProps = {
   gameAreaController: TicTacToeAreaController;
@@ -54,20 +56,56 @@ const StyledTicTacToeBoard = chakra(Container, {
  * @param gameAreaController the controller for the TicTacToe game
  */
 export default function TicTacToeBoard({ gameAreaController }: TicTacToeGameProps): JSX.Element {
-  //TODO - implement this component (delete what's here first)
-  return (
-    <StyledTicTacToeBoard aria-label='Tic-Tac-Toe Board'>
-      <StyledTicTacToeSquare aria-label='Cell 0,0'>
-        {gameAreaController.board[0][0]}
-      </StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 0,1'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 0,2'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 1,0'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 1,1'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 1,2'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 2,0'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 2,1'></StyledTicTacToeSquare>
-      <StyledTicTacToeSquare aria-label='Cell 2,2'></StyledTicTacToeSquare>
-    </StyledTicTacToeBoard>
-  );
+  const [board, setBoard] = useState(gameAreaController.board);
+  const [isOurTurn, setIsOurTurn] = useState(gameAreaController.isOurTurn);
+
+  const toast = useToast();
+
+  useEffect(() => {
+    const handleBoardChanged = (newBoard: TicTacToeCell[][]) => {
+      setBoard(newBoard);
+    };
+
+    const handleTurnChanged = (newIsOurTurn: boolean) => {
+      setIsOurTurn(newIsOurTurn);
+    };
+
+    gameAreaController.addListener('boardChanged', handleBoardChanged);
+    gameAreaController.addListener('turnChanged', handleTurnChanged);
+
+    return () => {
+      gameAreaController.removeListener('boardChanged', handleBoardChanged);
+      gameAreaController.removeListener('turnChanged', handleTurnChanged);
+    };
+  }, [gameAreaController]);
+
+  async function clickButton(row: TicTacToeGridPosition, col: TicTacToeGridPosition) {
+    try {
+      await gameAreaController.makeMove(row, col);
+    } catch (error) {
+      toast({
+        status: 'error',
+        description: `${error}`,
+      });
+    }
+  }
+
+  // loop nine times to create squares for each tic tac toe square
+  const boardCells = [];
+  for (let i = 0; i < 9; i++) {
+    const row = Math.floor(i / 3) as TicTacToeGridPosition;
+    const col = (i % 3) as TicTacToeGridPosition;
+    //disable the cell if the player is not in the game or if its not their turn
+    boardCells.push(
+      <StyledTicTacToeSquare
+        isDisabled={!gameAreaController.isPlayer || !isOurTurn}
+        onClick={() => clickButton(row, col)}
+        aria-label={`Cell ${row},${col}`}
+        key={`${row}${col}`}>
+        {board[row][col]}
+      </StyledTicTacToeSquare>,
+    );
+  }
+
+  return <StyledTicTacToeBoard aria-label='Tic-Tac-Toe Board'> {boardCells} </StyledTicTacToeBoard>;
 }

@@ -33,34 +33,52 @@ export default class TicTacToeAreaController extends GameAreaController<
    * and board[2][2] is the bottom-right cell
    */
   get board(): TicTacToeCell[][] {
-    const board = new Array<TicTacToeCell>(3).fill(undefined).map(() => new Array<TicTacToeCell>(3).fill(undefined));
-    let moves =  this._model.game?.state.moves
+    const board = new Array<TicTacToeCell>(3)
+      .fill(undefined)
+      .map(() => new Array<TicTacToeCell>(3).fill(undefined));
+    const moves = this._model.game?.state.moves;
     if (moves) {
-    for (let index = 0; index < moves.length; index++) {
-
+      for (let index = 0; index < moves.length; index++) {
+        board[moves[index].row][moves[index].col] = moves[index].gamePiece;
       }
     }
-    return [[]]; //TODO
+    return board;
   }
 
   /**
    * Returns the player with the 'X' game piece, if there is one, or undefined otherwise
    */
   get x(): PlayerController | undefined {
-    return undefined; //TODO
+    const xPlayerID = this._model.game?.state.x;
+    if (xPlayerID) {
+      const xPlayerControllers = this._players.filter(player => player.id == xPlayerID);
+      return xPlayerControllers[0];
+    } else {
+      return undefined;
+    }
   }
 
   /**
    * Returns the player with the 'O' game piece, if there is one, or undefined otherwise
    */
   get o(): PlayerController | undefined {
-    return undefined; //TODO
+    const oPlayerID = this._model.game?.state.o;
+    if (oPlayerID) {
+      const oPlayerControllers = this._players.filter(player => player.id == oPlayerID);
+      return oPlayerControllers[0];
+    } else {
+      return undefined;
+    }
   }
 
   /**
    * Returns the number of moves that have been made in the game
    */
   get moveCount(): number {
+    const moves = this._model.game?.state.moves;
+    if (moves) {
+      return moves.length;
+    }
     return 0; //TODO
   }
 
@@ -68,6 +86,10 @@ export default class TicTacToeAreaController extends GameAreaController<
    * Returns the winner of the game, if there is one
    */
   get winner(): PlayerController | undefined {
+    const winner = this._model.game?.state.winner;
+    if (winner) {
+      return this._players.filter(player => player.id == winner)[0];
+    }
     return undefined; //TODO
   }
 
@@ -76,7 +98,14 @@ export default class TicTacToeAreaController extends GameAreaController<
    * Returns undefined if the game is not in progress
    */
   get whoseTurn(): PlayerController | undefined {
-    return undefined; //TODO
+    if (this._model.game && this._model.game.state.status == 'IN_PROGRESS') {
+      if (this._model.game.state.moves.length % 2 == 0) {
+        return this.x;
+      } else {
+        return this.o;
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -84,14 +113,20 @@ export default class TicTacToeAreaController extends GameAreaController<
    * Returns false if it is not our turn, or if the game is not in progress
    */
   get isOurTurn(): boolean {
-    return true; //TODO
+    if (this._townController.ourPlayer == this.whoseTurn) {
+      return true;
+    }
+    return false;
   }
 
   /**
    * Returns true if the current player is a player in this game
    */
   get isPlayer(): boolean {
-    return false; //TODO
+    if (this._players.includes(this._townController.ourPlayer)) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -100,7 +135,14 @@ export default class TicTacToeAreaController extends GameAreaController<
    * Throws an error PLAYER_NOT_IN_GAME_ERROR if the current player is not a player in this game
    */
   get gamePiece(): 'X' | 'O' {
-    throw new Error(PLAYER_NOT_IN_GAME_ERROR); //TODO
+    if (this.isPlayer) {
+      if (this._model.game?.state.x == this._townController.ourPlayer.id) {
+        return 'X';
+      } else if (this._model.game?.state.o == this._townController.ourPlayer.id) {
+        return 'O';
+      }
+    }
+    throw new Error(PLAYER_NOT_IN_GAME_ERROR);
   }
 
   /**
@@ -108,14 +150,17 @@ export default class TicTacToeAreaController extends GameAreaController<
    * Defaults to 'WAITING_TO_START' if the game is not in progress
    */
   get status(): GameStatus {
-    return 'WAITING_TO_START'; //TODO
+    return this._model.game?.state.status ?? 'WAITING_TO_START';
   }
 
   /**
    * Returns true if the game is in progress
    */
   public isActive(): boolean {
-    return false; //TODO
+    if (this._model.game?.state.status == 'IN_PROGRESS') {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -130,9 +175,26 @@ export default class TicTacToeAreaController extends GameAreaController<
    * If the turn has changed, emits a 'turnChanged' event with true if it is our turn, and false otherwise.
    * If the turn has not changed, does not emit the event.
    */
+  // actaully update the board
   protected _updateFrom(newModel: GameArea<TicTacToeGameState>): void {
+    const newController = new TicTacToeAreaController(
+      'new controller',
+      newModel,
+      this._townController,
+    );
+    const newBoard = newController.board;
+    const newPlayerTurn = newController.whoseTurn;
+    if (this.board != newBoard) {
+      this.emit('boardChanged', newBoard);
+    }
+    if (this.whoseTurn != newPlayerTurn) {
+      if (this.isOurTurn) {
+        this.emit('turnChanged', true);
+      } else {
+        this.emit('turnChanged', false);
+      }
+    }
     super._updateFrom(newModel);
-    //TODO
   }
 
   /**
@@ -147,10 +209,14 @@ export default class TicTacToeAreaController extends GameAreaController<
    * @param col Column of the move
    */
   public async makeMove(row: TicTacToeGridPosition, col: TicTacToeGridPosition) {
-    if (row || col) {
-      //Delete this, it's just here to make the linter happy until you implement this method
-      return;
+    if (this._instanceID) {
+      this._townController.sendInteractableCommand(this.id, {
+        type: 'GameMove',
+        gameID: this._instanceID,
+        move: { gamePiece: this.gamePiece, row: row, col: col },
+      });
+    } else {
+      throw new Error(NO_GAME_IN_PROGRESS_ERROR);
     }
-    return; //TODO
   }
 }

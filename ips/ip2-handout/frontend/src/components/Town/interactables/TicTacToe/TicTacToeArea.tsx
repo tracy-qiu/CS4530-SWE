@@ -1,10 +1,21 @@
-import { Modal, ModalCloseButton, ModalContent, ModalHeader, ModalOverlay } from '@chakra-ui/react';
-import React, { useCallback } from 'react';
+import {
+  Modal,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  useToast,
+  Button,
+} from '@chakra-ui/react';
+import React, { useCallback, useState, useEffect } from 'react';
 import TicTacToeAreaController from '../../../../classes/interactable/TicTacToeAreaController';
 import { useInteractable, useInteractableAreaController } from '../../../../classes/TownController';
 import useTownController from '../../../../hooks/useTownController';
 import { InteractableID } from '../../../../types/CoveyTownSocket';
 import GameAreaInteractable from '../GameArea';
+import Leaderboard from '../Leaderboard';
+import TicTacToeBoard from './TicTacToeBoard';
+import PlayerController from '../../../../classes/PlayerController';
 
 /**
  * The TicTacToeArea component renders the TicTacToe game area.
@@ -40,8 +51,119 @@ import GameAreaInteractable from '../GameArea';
  */
 function TicTacToeArea({ interactableID }: { interactableID: InteractableID }): JSX.Element {
   const gameAreaController = useInteractableAreaController<TicTacToeAreaController>(interactableID);
+
+  const [observers, setObservers] = useState(gameAreaController.observers);
+  const [x, setX] = useState<PlayerController | undefined>(gameAreaController.x);
+  const [o, setO] = useState<PlayerController | undefined>(gameAreaController.o);
+  const [history, setHistory] = useState(gameAreaController.history);
+  const [status, setStatus] = useState(gameAreaController.status);
+  const [moveCount, setMoveCount] = useState(gameAreaController.moveCount);
+  const [whoseTurn, setWhoseTurn] = useState(gameAreaController.whoseTurn);
+  const [isOurTurn, setIsOurTurn] = useState(gameAreaController.isOurTurn);
+  const [winner, setWinner] = useState(gameAreaController.winner);
+  const [joinButtonDisabled, setJoinButtonDisabled] = useState(false);
+  const [loadingJoinGame, setLoadingJoinGame] = useState(false);
+  const [isPlayer, setIsPlayer] = useState(gameAreaController.isPlayer);
+
+  const toast = useToast();
+
+  useEffect(() => {
+    const handleGameUpdated = () => {
+      setObservers(gameAreaController.observers);
+      setHistory(gameAreaController.history);
+      setX(gameAreaController.x);
+      setO(gameAreaController.o);
+      setStatus(gameAreaController.status);
+      setMoveCount(gameAreaController.moveCount);
+      setWhoseTurn(gameAreaController.whoseTurn);
+      setIsOurTurn(gameAreaController.isOurTurn);
+      setWinner(gameAreaController.winner);
+      setIsPlayer(gameAreaController.isPlayer);
+      if (status == 'IN_PROGRESS') {
+        setJoinButtonDisabled(true);
+        setLoadingJoinGame(false);
+      } else if (gameAreaController.status == 'WAITING_TO_START') {
+        setJoinButtonDisabled(false);
+        setLoadingJoinGame(false);
+      }
+    };
+
+    const handleGameEnd = () => {
+      //display who won using toast
+      return (
+        <div>
+          {!winner &&
+            toast({
+              description: 'Game ended in a tie',
+            })}
+          {((winner == x && gameAreaController.gamePiece == 'X') ||
+            (winner == o && gameAreaController.gamePiece == 'O')) &&
+            toast({
+              description: 'You won!',
+            })}
+
+          {((winner == x && gameAreaController.gamePiece == 'O') ||
+            (winner == o && gameAreaController.gamePiece == 'X')) &&
+            toast({
+              description: 'You lost :(',
+            })}
+        </div>
+      );
+    };
+    gameAreaController.addListener('gameUpdated', handleGameUpdated);
+    gameAreaController.addListener('gameEnd', handleGameEnd);
+    return () => {
+      gameAreaController.removeListener('gameUpdated', handleGameUpdated);
+      gameAreaController.removeListener('gameEnd', handleGameEnd);
+    };
+  }, [gameAreaController]);
+
+  async function joinGameClick() {
+    try {
+      setJoinButtonDisabled(true);
+      setLoadingJoinGame(true);
+      await gameAreaController.joinGame();
+      setJoinButtonDisabled(false);
+      setLoadingJoinGame(false);
+    } catch (error) {
+      toast({
+        status: 'error',
+        description: `${error}`,
+      });
+    }
+  }
   // TODO - implement this component
-  return <>{gameAreaController.status}</>;
+  return (
+    <div>
+      <Leaderboard results={history} />
+      <ul aria-label='list of observers in the game'>
+        {observers.map(observer => (
+          <li key={observer.userName}>{observer.userName}</li>
+        ))}
+      </ul>
+      <ul aria-label='list of players in the game' role='list'>
+        <li> X: {x?.userName || '(No player yet!)'}</li>
+        <li> O: {o?.userName || '(No player yet!)'} </li>
+      </ul>
+      {status == 'IN_PROGRESS' && !isOurTurn && (
+        <div>
+          Game in progress, {moveCount} moves in, currently {whoseTurn?.userName}&apos;s turn
+        </div>
+      )}
+      {status == 'IN_PROGRESS' && isOurTurn && (
+        <div>Game in progress, {moveCount} moves in, currently your turn</div>
+      )}
+      {status == 'WAITING_TO_START' && <div>Game not yet started</div>}
+      {status == 'OVER' && <div>Game over</div>}
+      {(status == 'WAITING_TO_START' || status == 'OVER') && !isPlayer && (
+        <Button isDisabled={joinButtonDisabled} onClick={() => joinGameClick()}>
+          {!loadingJoinGame && `Join New Game`}
+          {loadingJoinGame && `Loading...`}
+        </Button>
+      )}
+      <TicTacToeBoard gameAreaController={gameAreaController}></TicTacToeBoard>
+    </div>
+  );
 }
 
 // Do not edit below this line
