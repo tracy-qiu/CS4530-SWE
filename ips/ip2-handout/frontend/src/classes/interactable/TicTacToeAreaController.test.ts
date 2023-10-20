@@ -38,7 +38,7 @@ describe('[T1] TicTacToeAreaController', () => {
     assert(p);
     return p;
   });
-  
+
   function ticTacToeAreaControllerWithProp({
     _id,
     history,

@@ -116,7 +116,7 @@ function TicTacToeArea({ interactableID }: { interactableID: InteractableID }): 
       gameAreaController.removeListener('gameUpdated', handleGameUpdated);
       gameAreaController.removeListener('gameEnd', handleGameEnd);
     };
-  }, [gameAreaController]);
+  }, [gameAreaController, x, o, status, toast, winner]);
 
   async function joinGameClick() {
     try {
