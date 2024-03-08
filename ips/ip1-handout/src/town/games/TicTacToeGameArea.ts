@@ -1,3 +1,8 @@
+import InvalidParametersError, {
+  GAME_ID_MISSMATCH_MESSAGE,
+  GAME_NOT_IN_PROGRESS_MESSAGE,
+  INVALID_COMMAND_MESSAGE,
+} from '../../lib/InvalidParametersError';
 import Player from '../../lib/Player';
 import {
   InteractableCommand,
@@ -15,6 +20,41 @@ import TicTacToeGame from './TicTacToeGame';
 export default class TicTacToeGameArea extends GameArea<TicTacToeGame> {
   protected getType(): InteractableType {
     return 'TicTacToeArea';
+  }
+
+  /**
+   * Changes the state is the game is over.
+   * - push history with the game ID and score.
+   */
+  private _changeStateIfGameOver(): void {
+    if (this.game?.state.status === 'OVER') {
+      const players = this.occupants;
+      if (this.game.state.winner === players[0].id) {
+        this.history.push({
+          gameID: this.game.id,
+          scores: {
+            [players[0].userName]: 1,
+            [players[1].userName]: 0,
+          },
+        });
+      } else if (this.game.state.winner === players[1].id) {
+        this.history.push({
+          gameID: this.game.id,
+          scores: {
+            [players[0].userName]: 0,
+            [players[1].userName]: 1,
+          },
+        });
+      } else if (this.game.state.winner === undefined) {
+        this.history.push({
+          gameID: this.game.id,
+          scores: {
+            [players[0].userName]: 0,
+            [players[1].userName]: 0,
+          },
+        });
+      }
+    }
   }
 
   /**
@@ -43,6 +83,44 @@ export default class TicTacToeGameArea extends GameArea<TicTacToeGame> {
     command: CommandType,
     player: Player,
   ): InteractableCommandReturnType<CommandType> {
-    throw new Error('Unimplemented - remove this once you start to implement this method');
+    let response: InteractableCommandReturnType<CommandType>;
+    // If not one of the three commands, throw error
+    if (
+      command.type !== 'JoinGame' &&
+      command.type !== 'LeaveGame' &&
+      command.type !== 'GameMove'
+    ) {
+      throw new InvalidParametersError(INVALID_COMMAND_MESSAGE);
+      // If no game in progress and it is a leave or move command, throw an error
+    } else if (this.game === undefined && command.type !== 'JoinGame') {
+      throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
+      // Join command
+    } else if (command.type === 'JoinGame') {
+      if (this.game === undefined) {
+        this._game = new TicTacToeGame();
+      }
+      this.game?.join(player);
+      this._emitAreaChanged();
+      response = { gameID: this.game?.id } as InteractableCommandReturnType<CommandType>;
+      // Game Move Command - apply move and check if game is over
+    } else if (command.type === 'GameMove') {
+      if (this.game?.id !== command.gameID) {
+        throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
+      }
+      this.game?.applyMove({ playerID: player.id, gameID: command.gameID, move: command.move });
+      this._changeStateIfGameOver();
+      this._emitAreaChanged();
+      response = undefined as InteractableCommandReturnType<CommandType>;
+      // Leave Command - player leave and change state if the game is over
+    } else {
+      if (this.game?.id !== command.gameID) {
+        throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
+      }
+      this.game.leave(player);
+      this._changeStateIfGameOver();
+      this._emitAreaChanged();
+      response = undefined as InteractableCommandReturnType<CommandType>;
+    }
+    return response;
   }
 }
