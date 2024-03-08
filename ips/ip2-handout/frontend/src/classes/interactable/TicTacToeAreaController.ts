@@ -177,24 +177,56 @@ export default class TicTacToeAreaController extends GameAreaController<
    */
   // actaully update the board
   protected _updateFrom(newModel: GameArea<TicTacToeGameState>): void {
-    const newController = new TicTacToeAreaController(
-      'new controller',
-      newModel,
-      this._townController,
-    );
-    const newBoard = newController.board;
-    const newPlayerTurn = newController.whoseTurn;
-    if (this.board != newBoard) {
-      this.emit('boardChanged', newBoard);
+    // const newController = new TicTacToeAreaController(
+    //   'new controller',
+    //   newModel,
+    //   this._townController,
+    // );
+    const previousBoard = this.board;
+    const previousTurn = this.whoseTurn;
+    // const newBoard = newController.board;
+    // const newPlayerTurn = newController.whoseTurn;
+    // if (this._instanceID && this.status === 'IN_PROGRESS') {
+    // if (this.board != newBoard) {
+    //   this.emit('boardChanged', newBoard);
+    // }
+    // if (this.whoseTurn != newPlayerTurn) {
+    //   if (this.isOurTurn) {
+    //     this.emit('turnChanged', true);
+    //   } else {
+    //     this.emit('turnChanged', false);
+    //   }
+    // }
+    // }
+    super._updateFrom(newModel);
+    // update the board and save it as new board
+    const newBoard: TicTacToeCell[][] = this.board;
+    const newTurn = this.whoseTurn;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (newBoard[row][col] != previousBoard[row][col]) {
+          this.emit('boardChanged', newBoard);
+        }
+      }
     }
-    if (this.whoseTurn != newPlayerTurn) {
+    if (previousTurn != newTurn) {
       if (this.isOurTurn) {
         this.emit('turnChanged', true);
       } else {
         this.emit('turnChanged', false);
       }
     }
-    super._updateFrom(newModel);
+    // loop through both boards to see if there is a update
+    // emit change if the board has changed
+    // const board = new Array<TicTacToeCell>(3)
+    //   .fill(undefined)
+    //   .map(() => new Array<TicTacToeCell>(3).fill(undefined));
+    // const moves = this._model.game?.state.moves;
+    // if (moves) {
+    //   for (let index = 0; index < moves.length; index++) {
+    //     board[moves[index].row][moves[index].col] = moves[index].gamePiece;
+    //   }
+    // }
   }
 
   /**
