@@ -1,0 +1,10 @@
+Exercise 2:
+- Adds grade for the correct student
+- Replaces course grade for a course that student already has a grade for
+- Throws error if student doesn't exist
+- Throws error if Course argument doesn't match CourseGrade
+
+Exercise 3:
+- Replaces course grade for a course that student already has a grade for
+- Throws error if student doesn't exist
+- Throws error if Course argument doesn't match CourseGrade
